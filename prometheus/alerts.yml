@@ -1,0 +1,30 @@
+groups:
+  - name: meridian-drift
+    rules:
+      # The headline alert: live data has drifted past the threshold.
+      - alert: DataDriftDetected
+        expr: meridian_dataset_drift == 1
+        for: 10s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data drift threshold breached"
+          description: "{{ $value }} — share of drifted features exceeded the configured threshold; retraining pipeline should fire."
+
+      # Early-warning band before the hard threshold.
+      - alert: DataDriftRising
+        expr: meridian_data_drift_share > 0.3
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data drift rising"
+          description: "Drift share {{ $value }} is climbing toward the threshold."
+
+      - alert: ServingDown
+        expr: up{job="serving"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Model serving is down"
