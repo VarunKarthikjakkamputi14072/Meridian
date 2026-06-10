@@ -12,7 +12,7 @@ import csv
 import threading
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import mlflow
 import pandas as pd
@@ -72,7 +72,7 @@ def _log_prediction(features: dict, prediction: float) -> None:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     path = settings.prediction_log_path
     new_file = not path.exists()
-    row = {"ts": datetime.now(timezone.utc).isoformat(), **features, "prediction": prediction}
+    row = {"ts": datetime.now(UTC).isoformat(), **features, "prediction": prediction}
     with open(path, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(row.keys()))
         if new_file:
@@ -108,7 +108,7 @@ def reload_model():
     try:
         return {"reloaded": True, "model_version": holder.load()}
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(503, f"reload failed: {e}")
+        raise HTTPException(503, f"reload failed: {e}") from e
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -121,7 +121,7 @@ def predict(features: TripFeatures):
     try:
         pred = holder.predict(df)
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(500, f"inference error: {e}")
+        raise HTTPException(500, f"inference error: {e}") from e
     PRED_LATENCY.observe(time.perf_counter() - start)
     PRED_COUNT.inc()
     PRED_VALUE.observe(pred)

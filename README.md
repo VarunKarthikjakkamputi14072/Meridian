@@ -4,21 +4,31 @@ End-to-end MLOps for a NYC-taxi **trip-duration** regressor. Not "an API call to
 LLM" — this owns the full model lifecycle: train → register → serve → monitor live
 traffic for **data drift** → fire an alert → **retrain and hot-reload** automatically.
 
+```mermaid
+flowchart LR
+    train["train.py<br/>(PyTorch)"] -- "register + promote" --> reg["MLflow<br/>model registry"]
+    reg -- "load @production" --> serve["serving<br/>(FastAPI)"]
+    serve -- "/predict" --> client(["client"])
+    serve -- "log features" --> log[("predictions.csv")]
+    train -- "snapshot" --> ref[("reference.parquet")]
+
+    log -- "tail window" --> drift["drift-monitor<br/>(Evidently)"]
+    ref -- "reference dist" --> drift
+    drift -- "retrain on drift" --> train
+    drift -- "POST /reload" --> serve
+
+    serve -- "/metrics" --> prom["Prometheus"]
+    drift -- "drift gauges" --> prom
+    prom -- "alert: DataDriftDetected" --> graf["Grafana<br/>dashboard"]
+
+    classDef store fill:#fff3cd,stroke:#d39e00,color:#333;
+    classDef svc fill:#d4edda,stroke:#28a745,color:#333;
+    class log,ref store;
+    class train,serve,drift,reg,prom,graf svc;
 ```
-                ┌──────────┐   register/promote   ┌──────────────────┐
-   train.py ───▶│  MLflow  │◀─────────────────────│  serving (FastAPI)│──▶ /predict
-   (PyTorch)    │ registry │   load production     └────────┬─────────┘
-                └──────────┘                                 │ logs features
-                      ▲                                      ▼
-                      │ retrain on drift            data/predictions.csv
-                      │                                      │ tail window
-              ┌───────┴────────┐   Evidently report  ┌───────┴─────────┐
-              │ drift-monitor  │◀────────────────────│  reference.parquet│
-              └───────┬────────┘                     └──────────────────┘
-                      │ /metrics (drift share, dataset_drift gauge)
-                      ▼
-              Prometheus ──alert: DataDriftDetected──▶ Grafana dashboard
-```
+
+<sub>The loop: train → register → serve → log live traffic → detect drift vs the training
+reference → alert + auto-retrain → hot-reload serving. Closed end-to-end, no manual step.</sub>
 
 ## Stack
 PyTorch (model) · MLflow (tracking + model registry) · FastAPI (serving) ·

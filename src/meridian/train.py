@@ -51,7 +51,7 @@ def _train_torch(x_train, y_train, x_val, y_val, *, epochs=30, hidden=64, lr=1e-
     return net
 
 
-def _current_production_rmse(client: "mlflow.MlflowClient") -> float | None:
+def _current_production_rmse(client: mlflow.MlflowClient) -> float | None:
     try:
         mv = client.get_model_version_by_alias(settings.model_name, settings.model_alias)
     except Exception:
@@ -76,7 +76,7 @@ def train_and_register(real_csv: str | None = None, *, reason: str = "baseline")
     x_tr_s, x_val_s, x_te_s = (scaler.transform(a) for a in (x_tr, x_val, x_te))
 
     hidden = 64
-    with mlflow.start_run(run_name=f"train-{reason}") as run:
+    with mlflow.start_run(run_name=f"train-{reason}"):
         mlflow.log_params(
             {"epochs": 30, "hidden": hidden, "lr": 1e-3, "n_rows": len(df),
              "source": "real_csv" if real_csv else "synthetic", "reason": reason}

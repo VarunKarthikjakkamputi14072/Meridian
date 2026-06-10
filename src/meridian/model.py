@@ -32,7 +32,7 @@ class StandardScaler:
         self.mean = mean
         self.std = std
 
-    def fit(self, x: np.ndarray) -> "StandardScaler":
+    def fit(self, x: np.ndarray) -> StandardScaler:
         self.mean = x.mean(axis=0)
         self.std = x.std(axis=0) + 1e-8
         return self
@@ -44,5 +44,5 @@ class StandardScaler:
         return {"mean": self.mean.tolist(), "std": self.std.tolist()}
 
     @classmethod
-    def from_state(cls, state: dict) -> "StandardScaler":
+    def from_state(cls, state: dict) -> StandardScaler:
         return cls(np.array(state["mean"]), np.array(state["std"]))
