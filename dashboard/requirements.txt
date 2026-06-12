@@ -1,0 +1,6 @@
+# Minimal deps for the standalone drift dashboard (demo mode).
+# The full training/serving stack (torch, mlflow, evidently) is NOT required to
+# run the dashboard — only to drive Live mode against a running cluster.
+streamlit>=1.36
+httpx>=0.27
+pandas>=2.0

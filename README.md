@@ -32,7 +32,8 @@ reference → alert + auto-retrain → hot-reload serving. Closed end-to-end, no
 
 ## Stack
 PyTorch (model) · MLflow (tracking + model registry) · FastAPI (serving) ·
-Evidently (data drift) · Prometheus (metrics + alerting) · Grafana (dashboard) · Docker Compose.
+Evidently (data drift) · Prometheus (metrics + alerting) · Grafana (dashboard) ·
+Streamlit + NVIDIA NIM (god-mode drift UI with AI root-cause) · Docker Compose.
 
 ## The 2-minute demo
 
@@ -52,10 +53,15 @@ Open in this order and watch the loop close:
 
 | What | URL | What you'll see |
 |------|-----|-----------------|
+| **Dashboard** | **http://localhost:8501** | **the front door** — flip on a blizzard, watch drift cross 0.5, have NVIDIA NIM write the root-cause, retrain and heal |
 | MLflow | http://localhost:5500 | model `taxi-trip-duration` v1 with `production` alias, metrics, params |
 | Serving | http://localhost:8000/docs | live `/predict`; `/metrics` for Prometheus |
 | Prometheus | http://localhost:9090/alerts | `DataDriftDetected` flips **green → firing** during the skew phase |
 | Grafana | http://localhost:3001 | "Meridian — Serving & Drift" dashboard, drift share crossing the red line |
+
+> The Streamlit dashboard is now baked into `docker compose up` — it spins up at
+> **:8501** alongside everything else. Set `NVIDIA_API_KEY` in your `.env` to enable
+> the AI root-cause panel (it's optional; the rest of the demo runs without it).
 
 **The money shot:** during the *normal* phase drift share sits near 0. When the
 simulator switches to *skew* (rain + cold + outer-borough trips), Evidently flags
