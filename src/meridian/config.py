@@ -48,6 +48,28 @@ class Settings(BaseSettings):
     drift_metrics_port: int = 8001     # prometheus scrape port for the monitor
     retrain_on_drift: bool = True
 
+    # --- RAG drift (fed by Transit's telemetry tap) ---
+    # The receiver appends query telemetry here; the RAG monitor tails it — the
+    # same "writer logs a CSV, monitor reads it" contract as serving/predictions.
+    rag_telemetry_log: str = "rag_telemetry.csv"
+    rag_reference_file: str = "rag_reference.parquet"
+    rag_feature_cols: tuple[str, ...] = (
+        "query_len",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "latency_ms",
+    )
+    rag_drift_threshold: float = 0.5
+    rag_drift_window: int = 300
+    rag_service_port: int = 8002       # telemetry receiver + RAG drift metrics
+    # On a RAG-drift breach, ask Hermes to re-ingest/re-embed the corpus — the
+    # act side of the loop (observe on the read path, act on the write path).
+    hermes_ingest_url: str = "http://order-api:8080/api/ingest"
+    reembed_on_drift: bool = True
+    reembed_doc_id: str = "rag-corpus"
+    reembed_chunk_count: int = 200
+
     @property
     def reference_path(self) -> Path:
         return self.data_dir / self.reference_file
@@ -55,6 +77,14 @@ class Settings(BaseSettings):
     @property
     def prediction_log_path(self) -> Path:
         return self.data_dir / self.prediction_log
+
+    @property
+    def rag_telemetry_path(self) -> Path:
+        return self.data_dir / self.rag_telemetry_log
+
+    @property
+    def rag_reference_path(self) -> Path:
+        return self.data_dir / self.rag_reference_file
 
 
 settings = Settings()

@@ -51,6 +51,18 @@ services:
     volumes:
       - shared_data:/data
 
+  # --- RAG drift: receives Transit's query telemetry, monitors corpus drift,
+  #     and triggers a Hermes re-embed on a breach (the cross-app loop) ---
+  rag-monitor:
+    build: .
+    environment: *meridian-env
+    # build the reference once, then serve the receiver + drift loop
+    command: sh -c "python -m meridian.rag.build_reference && uvicorn meridian.rag.service:app --host 0.0.0.0 --port 8002"
+    ports:
+      - "8002:8002"          # POST /telemetry/rag, GET /metrics
+    volumes:
+      - shared_data:/data
+
   # --- Prometheus: scrapes serving + drift monitor, evaluates alerts ---
   prometheus:
     image: prom/prometheus:latest
