@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import csv
 import threading
-import time
 from datetime import UTC, datetime
 
+import pandas as pd
 from fastapi import FastAPI
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, generate_latest
 from pydantic import BaseModel
@@ -66,19 +66,27 @@ def receive(record: RagTelemetry) -> dict:
     return {"ok": True}
 
 
+@app.post("/reference/build")
+def build_reference() -> dict:
+    """Snapshot the current telemetry as the drift reference — the on-corpus
+    baseline. Call after a warm-up of normal traffic so drift is judged against
+    observed production, not a synthetic distribution."""
+    path = settings.rag_telemetry_path
+    if not path.exists():
+        return {"ok": False, "reason": "no telemetry yet"}
+    df = pd.read_csv(path)[list(settings.rag_feature_cols)]
+    settings.rag_reference_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_parquet(settings.rag_reference_path)
+    return {"ok": True, "rows": int(len(df))}
+
+
 @app.get("/metrics")
 def metrics() -> Response:
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-def _run_monitor() -> None:
-    # Wait for a reference to exist (built once at setup), then loop forever.
-    while not settings.rag_reference_path.exists():
-        print("[rag-drift] waiting for rag_reference.parquet ...")
-        time.sleep(5)
-    monitor.run_loop()
-
-
 @app.on_event("startup")
 def _start_monitor() -> None:
-    threading.Thread(target=_run_monitor, name="rag-drift-monitor", daemon=True).start()
+    # The monitor loops; it idles until a reference parquet exists (built from a
+    # warm-up via /reference/build, or by meridian.rag.build_reference).
+    threading.Thread(target=monitor.run_loop, name="rag-drift-monitor", daemon=True).start()

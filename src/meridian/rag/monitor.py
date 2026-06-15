@@ -95,8 +95,13 @@ def run_once(reference: pd.DataFrame, already_triggered: bool) -> bool:
 
 
 def run_loop(stop=lambda: False) -> None:
-    reference = load_reference()
     already_triggered = False
     while not stop():
+        try:
+            reference = load_reference()
+        except FileNotFoundError:
+            # reference not built yet (e.g. waiting for warm-up traffic)
+            time.sleep(settings.drift_check_interval_s)
+            continue
         already_triggered = run_once(reference, already_triggered)
         time.sleep(settings.drift_check_interval_s)
